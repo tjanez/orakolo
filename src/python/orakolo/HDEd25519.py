@@ -1,9 +1,14 @@
+#!/usr/bin/env python
+
 from ecpy.curves import Curve,Point
 
 import hmac
 import hashlib
 import binascii
 import unicodedata
+import subprocess
+import shlex
+import base64
 
 
 """
@@ -390,6 +395,7 @@ class BIP32Ed25519:
 
         ENTER("mnemonic_to_seed")
         seed = hashlib.pbkdf2_hmac('sha512', _NFKDbytes(mnemonic), _NFKDbytes(prefix+passphrase), 2048)
+        trace("seed: %s" % binascii.hexlify(seed))
         LEAVE("mnemonic_to_seed")
         return seed
 
@@ -459,38 +465,19 @@ class BIP32Ed25519:
 if __name__ == "__main__":
 
     o = BIP32Ed25519()
-    if False:
-      for path in ("42'/1/2", "42'/3'/5"):
-          print("*************************************")
-          print("CHAIN: %s"%path)
-          print()
-          node = o.derive_mnemonic(True, path, u'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about')
-          ((kL, kR), A, c) = node
-          print("  kL:%s" % binascii.hexlify(kL))
-          print("  kR:%s" % binascii.hexlify(kR))
-          print("   c:%s" % binascii.hexlify(c))
-          print("   A:%s" % binascii.hexlify(A))
-          print()
-          print()
-
-    if True:
-      for path in ("42/1",): #
-          print("*************************************")
-          print("CHAIN: %s"%path)
-          print("private derivation")
-          node = o.derive_mnemonic(True, path, u'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about')
-          ((kL, kR), A, c) = node
-          print("  kL:%s" % binascii.hexlify(kL))
-          print("  kR:%s" % binascii.hexlify(kR))
-          print("   c:%s" % binascii.hexlify(c))
-          print("   A:%s" % binascii.hexlify(A))
-          print()
-
-          print("=== public derivation")
-          node = o.derive_mnemonic(False, path, u'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about')
-          (A, c) = node
-          print("   c:%s" % binascii.hexlify(c))
-          print("   A:%s" % binascii.hexlify(A))
-          print()
-          print()
-
+    # Zondax ledger-oasis development mnemonic.
+    # https://github.com/Zondax/ledger-oasis/blob/8ba79334d9fc025776738416fc9494894bba4d4b/deps/ledger-zxlib/dockerized_build.mk#L139.
+    mnemonic = 'equip will roof matter pink blind book anxiety banner elbow sun young'
+    for path in ("44'/474'/5'/0'/3'",): #
+        print("*************************************")
+        print("CHAIN: %s"%path)
+        print("private derivation")
+        node = o.derive_mnemonic(True, path, mnemonic)
+        ((kL, kR), A, c) = node
+        print("  kL:%s" % binascii.hexlify(kL))
+        print("  kR:%s" % binascii.hexlify(kR))
+        print("   c:%s" % binascii.hexlify(c))
+        print("   A:%s" % binascii.hexlify(A))
+        print("\n Oasis account address:\n")
+        subprocess.run(shlex.split("oasis-node stake pubkey2address --public_key {}".format(base64.b64encode(A).decode())), check=True)
+        print()
