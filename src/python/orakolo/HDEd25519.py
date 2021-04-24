@@ -478,6 +478,30 @@ if __name__ == "__main__":
         print("  kR:%s" % binascii.hexlify(kR))
         print("   c:%s" % binascii.hexlify(c))
         print("   A:%s" % binascii.hexlify(A))
+
+        # NOTE: The Oasis Ledger app doesn't use BIP32-Ed25519's private and
+        # public key directly but uses the obtained kL (first 32 bytes) of the
+        # 64 byte BIP32-Ed25519 derived private key as Ed25519's seed (i.e.
+        # non-extended private key).
+
+        # Initialize Ed25519 key from seed.
+        I = bytearray(_h512(kL))
+        kL, kR = I[:32], I[32:]
+        # the lowest 3 bits of the first byte of kL of are cleared
+        kL[0]  = _clear_bit( kL[0], 0b00000111)
+        # the highest bit of the last byte is cleared
+        kL[31] = _clear_bit(kL[31], 0b10000000)
+        # the second highest bit of the last byte is set
+        kL[31] =   _set_bit(kL[31], 0b01000000)
+
+        cv25519 = Curve.get_curve("Ed25519")
+        k_scalar = int.from_bytes(bytes(kL), 'little')
+        P = k_scalar*cv25519.generator
+        A =  cv25519.encode_point(P)
+
+        print("\nPublic key:\n")
+        print(binascii.hexlify(A))
+
         print("\n Oasis account address:\n")
         subprocess.run(shlex.split("oasis-node stake pubkey2address --public_key {}".format(base64.b64encode(A).decode())), check=True)
         print()
